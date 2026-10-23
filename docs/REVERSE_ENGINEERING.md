@@ -48,7 +48,9 @@ This section replaces an earlier, weaker version that relied on the device tree 
 - **Observed (running unit):** `/proc/meminfo` reports `MemTotal: 4194304 kB` (exactly 4 GiB), `LowTotal: 3929088 kB` and `HighTotal: 265216 kB`. With a 3G/1G split and `VmallocTotal: 245760 kB`, a real low-memory zone of 3.75 GB cannot exist (it would be about 760 MB at most).
 - **Conclusion:** the `/proc/meminfo` numbers are inconsistent with this kernel. The 4 GB figure is almost certainly a patched or spoofed display value. Physical RAM is at most 2 GiB. The device tree's 1 GiB (`/memory reg = <0x80000000 0x40000000>`) makes 1 GiB the most likely value.
 - **Unknown:** where the spoof is applied (kernel patch or a framework hook), and whether the real size is 1 GiB or 2 GiB.
-- **Why it matters:** Android sizes its low-memory-killer thresholds and cached-process limits from the RAM figure it is told. If it believes it has 4 GB, those limits are wrong for a 1 GiB device, so apps stay cached too long and the unit swaps heavily. A ROM that reports the true RAM size, plus `ro.config.low_ram`-style tuning, is the single most promising speed fix.
+- **Confirmed on the running unit (2026-10-23):** `/proc/iomem` lists "System RAM" only at `0x80000000-0x8fffffff`, `0x92100000-0x944fffff` and `0x95000000-0xbfafffff`, and the bootloader-written device-tree memory node is `0x80000000 + 0x20000000` and `0xa0000000 + 0x1fc00000`. That adds up to about **1 GiB (about 975 MB usable)**. The 4 GB shown in Settings is false.
+- **Where the spoof is (observed 2026-10-23):** only the `/proc/meminfo` file lies. The `sysinfo` syscall (used by `free` and by Android's `Process.getTotalMemory()`) reports **954,672 kB (932 MB)**, and `/proc/zoneinfo` shows Normal 172,364 + HighMem 66,304 managed pages (= 932 MB). So the framework and any app using `sysinfo`/`sysconf` already see the true size. Only apps that parse `/proc/meminfo` see 4 GB.
+- **Why it matters:** apps that trust `MemTotal` (browsers, Play services, video apps) may size their caches for 4 GB and then thrash. The Android low-memory-killer thresholds themselves are **not** affected: for any RAM above about 700 MB the framework picks its maximum levels (observed `minfree` = 72/90/108/126/144/180 MB), the same for 1 GiB and 4 GiB. An earlier draft of this report said otherwise; that was wrong.
 - **To settle the exact size (read-only, on the unit):** `cat /proc/iomem` (the "System RAM" lines), `dmesg | grep -iE "memory:|Memory:"`, `cat /sys/firmware/devicetree/base/memory/reg | xxd`.
 
 ## 5. Boot-time scripts and services (`init.jancar.rc`, `system/bin/*`)
@@ -83,7 +85,15 @@ Strings in `ivi-settings.apk` and `ivi-services.apk` (observed) show a USB-stick
 - MCU: `/jancar/mcu/jacmcu.bin` (9.8 KB) is the MCU firmware, updated separately through the service (`McuUpgradeErrorMsg`).
 - Recovery (`sbin/recovery`) verifies packages ("Verifying update package...") with the test key from section 6.
 
-**Unknown:** the exact internal format of `update.img` (a recovery OTA zip, or a MediaTek scatter-style image) and the exact `pcb_version.txt` format. These must be established before building a flashable package.
+**Decompiled with jadx 1.5.6 (`ivi-services` `SystemUpgrade`, `ivi-settings` `UpdateSystemActivity` / `UpdateUtil`) - observed:**
+
+- **Format:** `update.zip` / `update.img` is a standard **Android OTA zip**. The app calls `RecoverySystem.verifyPackage(file, ...)` (signature check against `/system/etc/security/otacerts.zip`, the public test key) and then `RecoverySystem.installPackage(...)`, which writes `/cache/recovery/command` and reboots into the stock recovery.
+- **Normal path:** USB stick `<root>/update/update.zip` (or `update.img`) plus a one-line text file `<root>/update/hwversion.txt`. The text is only displayed as the "new version"; the Update button needs it to be **non-empty**. No comparison with the current version was found in this path. The package is first copied to `/data/update/update.img` (fallback `/data/update.img`) by `CopyFileActivity`, then verified and installed.
+- **Recovery path:** if `<root>/RecoveryUpdate/system/update.img` exists, a dialog offers a recovery update, which installs `/udisk/RecoveryUpdate/update/update.img` (note the different folder name, a quirk of the vendor code).
+- **`pcb_version.txt`** belongs to the hardware/MCU version code (`HardwareVersionUtils` in `ivi-services`), not to the system update. The `upgrade_package_version_is_too_low` string is not used by the system-update path.
+- **Recovery:** stock Android 8.1-style recovery. It extracts `META-INF/com/google/android/update-binary` from the zip to `/tmp/update-binary` and runs it, and it can read `META-INF/com/android/metadata`. The ramdisk has no shell and no `/system/bin`, but it **does** contain `mke2fs_static` and `e2fsdroid_static` (ARM, static).
+- **Inferred:** because `update-binary` is simply an executable run by recovery, a package can carry its own small static ARM `update-binary` (the Android NDK on this Mac can compile one) instead of the AOSP edify updater. A file-based update (mount `/system` read-write, delete/copy files, set modes and SELinux labels) then needs no ext4 image build.
+- **Unknown:** whether this recovery enforces a downgrade/timestamp check on packages that carry no `metadata` file. It can be tested safely with a do-nothing package: the unit's own updater verifies the signature first, and a rejected package changes nothing.
 
 ## 8. Application architecture
 
@@ -183,7 +193,7 @@ Ranked by expected benefit, with the risk. These are proposals, not yet built or
 
 | # | Change | Where | Expected effect | Risk |
 |---|---|---|---|---|
-| 1 | Report the real RAM size and set `ro.config.low_ram`-style tuning, lower `dalvik.vm.heapgrowthlimit` | the spoof location (unknown) + `build.prop` | Correct LMK thresholds and fewer cached apps; probably the largest gain | Medium: first find where the 4 GB is faked |
+| 1 | Set `ro.config.low_ram`-style tuning and lower `dalvik.vm.heapgrowthlimit` for the real 932 MB | `build.prop` | Fewer cached processes and smaller app heaps. The spoof itself (only in `/proc/meminfo`) matters little, because the framework already sees the real size | Low-medium |
 | 2 | Remove the Google app (Velvet), Acrobat, loggers, calendar/contacts sync, setup wizards, feedback, wallpaper pickers | `/system`, `/vendor` | Frees ~400-500 MB of `/system`; stops ~250 MB of RAM from being used by boot-time apps | Low |
 | 3 | Remove TXZ (236 MB) | `/system/app`, `/vendor/app` | Frees the most `/system` space | Low (not installed on the unit); the settings app references it |
 | 4 | Reduce zram from 1 GiB to about 25-50% of real RAM | `fstab.enableswap` in the boot image | Less memory spent on compressed swap | Medium: needs a boot image change |
@@ -194,16 +204,31 @@ Ranked by expected benefit, with the risk. These are proposals, not yet built or
 
 Leave the bootloader, preloader, TEE, NVRAM and the MCU firmware alone.
 
-**Build and test path:** (a) apply 2 live over adb first (reversible), measure free memory and swap; (b) apply 1 and 5 live by editing `/system` in place over adb root (`mount -o remount,rw /system`, no flashing); (c) only when stable, build a `system` image in a Linux environment, sign the update with the public test key, and flash it from USB (section 7), with the verified stock backup as the way back.
+**Flash package design (proposed, nothing built yet):**
 
-## 14. Open questions and read-only checks to run on the unit
+1. **Safety net first.** Build `restore-stock.zip`: a signed OTA whose small static `update-binary` writes the saved `ANDROID.img` back to `by-name/ANDROID` (and verifies its checksum). Test its signature on the unit (the unit's own updater verifies before it installs). This is the way back, and it needs no ext4 build.
+2. **Do-nothing test.** A signed zip whose `update-binary` only prints a message and exits, to prove the full chain (USB, copy, verify, recovery, run) on this unit with no change to the system.
+3. **File-based ROM package.** `update-binary` mounts `/system` read-write, deletes the removed apps, copies replaced files (for example a trimmed `preinstall.sh`, `build.prop`), applies modes and SELinux labels from the manifest, syncs and unmounts. Only `/system` (and `/vendor` if needed) is touched. The bootloader, kernel, recovery and MCU stay untouched.
+4. **Signing:** whole-file OTA signature with the public AOSP test key (SHA-1, RSA-2048, the key type the recovery's `/res/keys` holds). The private test key is published in the AOSP source tree; I would verify that it matches the unit's certificate before using it.
+5. **Order of risk:** steps 1 and 2 change nothing on the unit; step 3 changes only files that can be restored by step 1.
+
+**Build and test path:** (a) apply live over adb first (reversible), measure free memory and swap; (b) apply the same file edits in place over adb root (`mount -o remount,rw /system`, no flashing) once the live results are good; (c) only then wrap them in the signed package above, with the stock backup as the way back.
+
+## 14. Live measurements from the unit (2026-10-23, before any change)
+
+- Memory: `MemFree` about 37 MB, `MemAvailable` about 416 MB, zram swap 185 MB used of 1 GiB.
+- The load average of about 12 is **not** real CPU load. About a dozen vendor kernel threads (touch panel, PWM, hang detector, entropy, display capture) sit permanently in uninterruptible sleep, which the load average counts. A 10-second idle sample showed 92% idle CPU.
+- Since boot (1.5 days): about 45 GB read from the eMMC (`pgpgin`), 3.2 GB swapped in and 4.7 GB swapped out, about 9.7 million working-set refaults (code pages evicted and re-read), 8,282 direct-reclaim stalls. Disk writes average about 52 ms each (`/proc/diskstats`). That is thrashing on a 1 GiB device with slow, worn flash.
+- Largest resident processes: Google Play services (about 370 MB across 3 processes), Play Store (about 370 MB across 4 processes), Chrome, Google text-to-speech (75 MB), `com.jancar.settings` (63 MB).
+
+## 15. Open questions and read-only checks to run on the unit
 
 | Question | Command (read-only) |
 |---|---|
 | Real RAM size | `cat /proc/iomem`; `dmesg \| grep -i "Memory:"`; `cat /sys/firmware/devicetree/base/memory/reg \| xxd` |
-| Where is the 4 GB faked? | compare `/proc/meminfo` with `/proc/iomem`; search `framework.jar` and `libc.so` for a `MemTotal` or `sysinfo` hook |
+| Where is the 4 GB faked? | Located: only `/proc/meminfo` (see section 4). The exact kernel patch is not needed for the ROM |
 | Is TXZ installed? | `pm path com.txznet.txz` |
 | Is dm-verity on? | `getprop \| grep -i verity`; `grep system /proc/mounts` (mounted straight from `by-name/ANDROID`, so verity looks unused) |
 | Which daemons actually run? | `ps -A` and compare with the 10.3 list |
-| What does `update.img` contain? | only test on the unit's own updater after a verified backup |
+| Does recovery enforce a downgrade check? | send a signed do-nothing package through the unit's updater (see section 7) |
 | Are the vendor hosts contacted? | `cat /proc/net/tcp` / traffic capture while the unit is on Wi-Fi |
