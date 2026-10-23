@@ -5,6 +5,7 @@ Speeding up a laggy Android car head unit (JANCAR-style, Autochips AC8227L), and
 Goal: make the unit less laggy and keep APK installing working. A from-scratch custom ROM is not possible on this chip (no public source or drivers), so the plan is a debloated, tuned version of the unit's **own** stock firmware.
 
 - [`docs/PLAN.md`](docs/PLAN.md): goals, phases and current status
+- [`docs/REVERSE_ENGINEERING.md`](docs/REVERSE_ENGINEERING.md): what the stock firmware contains and how it works
 - [`docs/DEBLOAT_LIST.md`](docs/DEBLOAT_LIST.md): the list of apps to switch off
 - [`device-info/`](device-info): read-only facts collected from the unit (serial number removed)
 - [`tools/`](tools): scripts for the read-only check, partition backup and image extraction
