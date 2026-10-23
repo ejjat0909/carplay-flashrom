@@ -1,0 +1,26 @@
+total 0 total 0
+ANDROID -> /dev/block/mmcblk0p23
+ARM2 -> /dev/block/mmcblk0p9
+BOOTIMG -> /dev/block/mmcblk0p10
+CACHE -> /dev/block/mmcblk0p24
+DKB -> /dev/block/mmcblk0p20
+EXPDB -> /dev/block/mmcblk0p18
+FRP -> /dev/block/mmcblk0p21
+KB -> /dev/block/mmcblk0p19
+LK -> /dev/block/mmcblk0p6
+LOGO -> /dev/block/mmcblk0p14
+METAZONE -> /dev/block/mmcblk0p15
+MISC -> /dev/block/mmcblk0p13
+NVRAM -> /dev/block/mmcblk0p2
+ODMDTBO -> /dev/block/mmcblk0p16
+PROTECT_F -> /dev/block/mmcblk0p3
+PROTECT_S -> /dev/block/mmcblk0p4
+PRO_INFO -> /dev/block/mmcblk0p1
+RECOVERY -> /dev/block/mmcblk0p11
+SECCFG -> /dev/block/mmcblk0p5
+SEC_RO -> /dev/block/mmcblk0p12
+TEE1 -> /dev/block/mmcblk0p7
+TEE2 -> /dev/block/mmcblk0p8
+VENDOR -> /dev/block/mmcblk0p17
+jancar -> /dev/block/mmcblk0p22
+userdata -> /dev/block/mmcblk0p25

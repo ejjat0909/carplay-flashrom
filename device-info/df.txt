@@ -1,0 +1,9 @@
+Filesystem            1K-blocks    Used Available Use% Mounted on
+tmpfs                    474264     812    473452   1% /dev
+/dev/block/mmcblk0p23   1523568 1486140     37428  98% /system
+/dev/block/mmcblk0p17    507848  480300     27548  95% /vendor
+tmpfs                    474264       0    474264   0% /mnt
+/dev/block/mmcblk0p25  12196360 7237316   4959044  60% /data
+/dev/block/mmcblk0p24    237536     332    237204   1% /cache
+/dev/block/mmcblk0p22    507848   11852    495996   3% /jancar
+/data/media            12196360 7237316   4959044  60% /mnt/runtime/default/emulated

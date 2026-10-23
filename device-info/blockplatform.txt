@@ -1,0 +1,4 @@
+total 0
+drwxr-xr-x 3 root root 60 2010-01-01 08:00 mt_usb
+drwxr-xr-x 3 root root 60 2010-01-01 08:00 mt_usb1
+drwxr-xr-x 3 root root 60 2010-01-01 08:00 soc

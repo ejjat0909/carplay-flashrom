@@ -1,0 +1,1 @@
+Linux version 3.18.79+ (jac0416@jacxp) (gcc version 6.3.1 20170404 (Linaro GCC 6.3-2017.05) ) #6 SMP PREEMPT Fri Feb 25 14:07:30 CST 2022
