@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.cloone.clockdream">
+    <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="27" />
+    <application android:label="Clock Screen Saver"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+
+        <!-- The Android screen saver (what the system starts when the unit is idle). -->
+        <service android:name=".ClockDream"
+            android:exported="true"
+            android:label="Clock"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <!-- Same screen as an app, so it can be opened by hand. Touch to close. -->
+        <activity android:name=".ClockActivity"
+            android:exported="true"
+            android:label="Screen saver"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode|locale">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

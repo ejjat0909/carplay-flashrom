@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.cloone.carhome">
+    <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="27" />
+    <application android:label="Car Home"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+        android:hardwareAccelerated="true">
+        <activity android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode|locale|layoutDirection"
+            android:screenOrientation="landscape">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -20,24 +20,22 @@
 
 | # | Phase | Status |
 |---|---|---|
-| 1 | Get adb working (USB was not detected, Wi-Fi adb was already open on 5555) | Done |
+| 1 | Get adb working (Wi-Fi adb on 5555 was already open) | Done |
 | 2 | Read-only check of the unit (`tools/check.sh`) | Done |
-| 3 | Full backup of all partitions except `userdata` and `cache`, checksum-verified | Done (25 of 25 OK) |
-| 4 | Unpack system, vendor and jancar images on the Mac (`tools/extract.py`) | Done |
-| 5 | Build the debloat list (`docs/DEBLOAT_LIST.md`) | Done, approved by the owner |
-| 6 | Apply the list live with `pm disable-user` (reversible), in two groups, with checks in between | **Next**, waiting for the unit to be online |
-| 7 | Measure free RAM and swap before and after | After phase 6 |
-| 8 | If it helps: repack the system image without the removed apps (frees `/system`), keep APK install enabled | Planned |
-| 9 | Flash the repacked image through the unit's USB/SD update, with the stock images as the way back | Planned, needs the unit's recovery method confirmed |
-
-## Checks after each group in phase 6
-Reverse camera, Bluetooth calls, audio, and installing an APK.
+| 3 | Full partition backup, checksum-verified | Done (25 of 25 OK) |
+| 4 | Unpack system, vendor and jancar images (`tools/extract.py`) | Done |
+| 5 | Debloat list (`docs/DEBLOAT_LIST.md`) | Done, approved |
+| 6 | Apply it live with `pm disable-user` | Done (29 apps), then made permanent in phase 8 |
+| 7 | Measure memory before and after | Partly: free memory 37 MB to about 79 MB after phase 6 |
+| 8 | Remove the apps from `/system` in place (software write-protect switched off, see `docs/ROM_CHANGES.md`) | Done; `/system` 98% to 60% |
+| 9 | Flashable update package | Not built. In-place editing was used instead |
+| 10 | New launcher, Android Auto (Headunit Revived), clock screen saver, Bluetooth Guard | Done; see `docs/ROM_CHANGES.md` |
 
 ## Risks
 - A bad flash can brick the unit. The stock images (kept off GitHub) are the only way back, so keep a second copy.
-- Disabling microG breaks ReVanced YouTube/YouTube Music. It is reversible with `pm enable`.
+- microG and ReVanced YouTube were removed with the data wipe.
 - The eMMC is worn: avoid heavy writes and large installs.
 
 ## Open questions
-- Exact USB/SD update method of the unit.
-- Which Google Play services the owner really uses (real, microG, or both).
+- Full car-off/car-on test of the automatic Android Auto start (`docs/ROM_CHANGES.md`, section 6).
+- Status-bar Home and Recents icons with the new launcher.
